@@ -7,7 +7,7 @@ import java.util.UUID;
 
 @Getter
 @Setter
-public class AssigneeRequestDto {
+public class AssignmentRequestDto {
 
     private UUID userId;
 }

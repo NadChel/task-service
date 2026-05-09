@@ -1,7 +1,6 @@
 package com.example.task_service.service;
 
-import com.example.task_service.data.dto.request.AssigneeRequestDto;
-import com.example.task_service.data.dto.request.StatusRequestDto;
+import com.example.task_service.data.Status;
 import com.example.task_service.data.dto.request.TaskRequestDto;
 import com.example.task_service.data.dto.response.TaskResponseDto;
 import com.example.task_service.data.entity.Task;
@@ -32,13 +31,13 @@ public class TaskService {
     private final KafkaTemplate<UUID, TaskEvent> kafkaTemplate;
     private static final String TASKS_TOPIC = "tasks";
 
-    public List<TaskResponseDto> findTasks(Pageable pageable) {
+    public List<TaskResponseDto> findAll(Pageable pageable) {
         return repository.findAll(pageable).stream()
                 .map(mapper::toDto)
                 .toList();
     }
 
-    public Optional<TaskResponseDto> findTask(UUID id) {
+    public Optional<TaskResponseDto> findById(UUID id) {
         return repository.findById(id).map(mapper::toDto);
     }
 
@@ -51,9 +50,9 @@ public class TaskService {
     }
 
     @Transactional(readOnly = false)
-    public TaskResponseDto updateAssignee(UUID taskId, AssigneeRequestDto assignee) {
+    public TaskResponseDto updateAssignee(UUID taskId, UUID userId) {
         Task fetchedTask = loadTask(taskId);
-        User fetchedUser = loadUser(assignee);
+        User fetchedUser = loadUser(userId);
         fetchedTask.setAssignee(fetchedUser);
         Task updatedTask = repository.save(fetchedTask);
         TaskResponseDto taskResponseDto = mapper.toDto(updatedTask);
@@ -66,15 +65,15 @@ public class TaskService {
         return taskOptional.orElseThrow(() -> new EntityNotFoundException("No such task"));
     }
 
-    private User loadUser(AssigneeRequestDto assignee) {
-        Optional<User> userOptional = userRepository.findById(assignee.getUserId());
+    private User loadUser(UUID userId) {
+        Optional<User> userOptional = userRepository.findById(userId);
         return userOptional.orElseThrow(() -> new EntityNotFoundException("No such user"));
     }
 
     @Transactional(readOnly = false)
-    public TaskResponseDto updateStatus(UUID taskId, StatusRequestDto status) {
+    public TaskResponseDto updateStatus(UUID taskId, Status status) {
         Task fetchedTask = repository.findById(taskId).orElseThrow();
-        fetchedTask.setStatus(status.getStatus());
+        fetchedTask.setStatus(status);
         Task updatedTask = repository.save(fetchedTask);
         return mapper.toDto(updatedTask);
     }
