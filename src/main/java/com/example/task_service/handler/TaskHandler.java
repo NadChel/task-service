@@ -48,12 +48,13 @@ public class TaskHandler {
         );
     }
 
-    @Operation(description = "Retrieves task by id.")
-    @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json"), description = "Task page.")
+    @Operation(parameters = @Parameter(in = ParameterIn.PATH, name = "id"), description = "Retrieves task by id.")
+    @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json"), description = "Task.")
     public Mono<ServerResponse> findById(ServerRequest request) {
-        UUID id = UUID.fromString(request.pathVariable("id"));
-        return Mono.fromCallable(() -> service.findTask(id))
+        return Mono.fromCallable(() -> UUID.fromString(request.pathVariable("id")))
+                .map(service::findTask)
                 .subscribeOn(Schedulers.boundedElastic())
+                .flatMap(Mono::justOrEmpty)
                 .flatMap(task -> ServerResponse.ok().bodyValue(task));
     }
 

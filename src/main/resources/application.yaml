@@ -2,7 +2,7 @@ spring:
   application:
     name: task-service
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_NAME:postgres}
+    url: jdbc:postgresql://${POSTGRES_SERVER:localhost:5432/postgres}
     username: ${POSTGRES_USERNAME:postgres}
     password: ${POSTGRES_PASSWORD:postgres}
   jpa:
@@ -12,6 +12,8 @@ spring:
     init:
       schema-locations: classpath:schema.sql
       mode: always
+  kafka:
+    bootstrap-servers: ${KAFKA_SERVER:localhost:9092}
 springdoc:
   swagger-ui:
     path: /swagger-ui
