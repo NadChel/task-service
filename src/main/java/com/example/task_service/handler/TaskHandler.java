@@ -31,10 +31,10 @@ public class TaskHandler {
     private final TaskService service;
 
     @Operation(parameters = {
-            @Parameter(name = "page", description = "Zero-based page number. Default is 0"),
-            @Parameter(name = "size", description = "Number of records per page. Default is 20")
+            @Parameter(name = "page", description = "A zero-based page number. The default is 0."),
+            @Parameter(name = "size", description = "A number of records per page. The default is 20.")
     }, description = "Retrieves tasks.")
-    @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json"), description = "Task page.")
+    @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json"), description = "The task page.")
     public Mono<ServerResponse> findAll(ServerRequest request) {
         return Mono.fromCallable(() -> getPageable(request))
                 .map(service::findAll)
@@ -48,8 +48,13 @@ public class TaskHandler {
         return PageRequest.of(page, size);
     }
 
-    @Operation(parameters = @Parameter(in = ParameterIn.PATH, name = "id"), description = "Retrieves task by id.")
-    @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json"), description = "Task.")
+    @Operation(parameters = @Parameter(in = ParameterIn.PATH, name = "id", required = true),
+            description = "Retrieves a task by its id.")
+    @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json"), description = "The task.")
+    @ApiResponse(responseCode = "400", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class)),
+            description = "If `id` does not conform to the UUID format.")
+    @ApiResponse(responseCode = "404", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class)),
+            description = "If `id` does not match any existing task.")
     public Mono<ServerResponse> findById(ServerRequest request) {
         return Mono.fromCallable(() -> UUID.fromString(request.pathVariable("id")))
                 .map(service::findById)
@@ -62,8 +67,8 @@ public class TaskHandler {
     }
 
     @Operation(requestBody = @RequestBody(content = @Content(schema = @Schema(implementation = TaskRequestDto.class)), required = true),
-            description = "Creates task.")
-    @ApiResponse(responseCode = "201", content = @Content(mediaType = "application/json"), description = "A created task.")
+            description = "Creates a task.")
+    @ApiResponse(responseCode = "201", content = @Content(mediaType = "application/json"), description = "The created task.")
     public Mono<ServerResponse> save(ServerRequest request) {
         return request.bodyToMono(TaskRequestDto.class)
                 .map(service::save)
@@ -71,10 +76,12 @@ public class TaskHandler {
                 .flatMap(task -> ServerResponse.status(HttpStatus.CREATED).bodyValue(task));
     }
 
-    @Operation(parameters = @Parameter(in = ParameterIn.PATH, name = "id"),
-            requestBody = @RequestBody(content = @Content(schema = @Schema(implementation = AssignmentRequestDto.class))),
-            description = "Assigns a task with a provided id to a specified user.")
-    @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json"), description = "Updated task.")
+    @Operation(parameters = @Parameter(in = ParameterIn.PATH, name = "id", required = true),
+            requestBody = @RequestBody(content = @Content(schema = @Schema(implementation = AssignmentRequestDto.class)), required = true),
+            description = "Assigns a task matching the provided id to the specified user.")
+    @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json"), description = "The assigned task.")
+    @ApiResponse(responseCode = "404", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class)),
+            description = "If `id` or `userId` does not match any existing task or user respectively.")
     public Mono<ServerResponse> updateAssignee(ServerRequest request) {
         return request.bodyToMono(AssignmentRequestDto.class)
                 .map(AssignmentRequestDto::getUserId)
@@ -84,12 +91,17 @@ public class TaskHandler {
                 .onErrorResume(EntityNotFoundException.class, t -> ServerResponse.status(HttpStatus.NOT_FOUND).bodyValue(ErrorResponseDto.from(t)));
     }
 
-    @Operation(parameters = @Parameter(in = ParameterIn.PATH, name = "id"),
-            requestBody = @RequestBody(content = @Content(schema = @Schema(implementation = StatusRequestDto.class))),
+    @Operation(parameters = @Parameter(in = ParameterIn.PATH, name = "id", required = true),
+            requestBody = @RequestBody(content = @Content(schema = @Schema(implementation = StatusRequestDto.class)), required = true),
             description = """
-                    Updates task status given a task id and a new status.
+                    Updates a task's status given its id and a new status.
                     
-                    Supported values: TO_DO, IN_PROGRESS, DONE.""")
+                    Supported statuses: TO_DO, IN_PROGRESS, DONE.""")
+    @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json"), description = "The updated task.")
+    @ApiResponse(responseCode = "400", content = @Content(mediaType = "application/json"),
+            description = "If `status` is invalid.")
+    @ApiResponse(responseCode = "404", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDto.class)),
+            description = "If `id` does not match any existing task.")
     public Mono<ServerResponse> updateStatus(ServerRequest request) {
         return request.bodyToMono(StatusRequestDto.class)
                 .map(StatusRequestDto::getStatus)
