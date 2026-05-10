@@ -14,6 +14,3 @@ spring:
       mode: always
   kafka:
     bootstrap-servers: ${KAFKA_SERVER:localhost:9092}
-springdoc:
-  swagger-ui:
-    path: /swagger-ui
